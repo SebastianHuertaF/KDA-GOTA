@@ -29,11 +29,12 @@ app.use('/api/v1/pabellones', pabellonRouter); // direccionar las rutas
 app.use('/api/v1/codigos', codigoRouter); // direccionar las rutas
 app.use('/api/v1/bebederos', bebederoRouter); // direccionar las rutas
 
-app.use(errorMiddleware);
 
 app.get('/', (req, res) => {
     res.send('Bienvenido a KDA GOTA APP');
 });
+
+app.use(errorMiddleware);
 
 app.listen(PORT, async() => {
     console.log('KDA GOTA App listening on http://localhost:'+ PORT );
