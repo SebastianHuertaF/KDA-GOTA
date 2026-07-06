@@ -1,0 +1,121 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id            Int       @id @default(autoincrement())
+  correo        String    @unique
+  password      String
+  activo        Boolean   @default(true)
+  latest_login  DateTime? // Opcional, ya que al registrarse puede ser nulo
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @default(now())@updatedAt
+  deleted_at    DateTime? // Opcional para soft deletes
+  deleted_by    Int?      // Opcional, cambiado a Int asumiendo el ID del admin que lo borra
+}
+
+model Pabellon {
+  id            Int        @id @default(autoincrement())
+  nombre        String
+  abreviation   String
+  activo        Boolean    @default(true)
+
+  // Relaciones
+  bebederos     Bebedero[]
+
+  // Timestamps
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @default(now())@updatedAt
+  deleted_at    DateTime? // Opcional para soft deletes
+  deleted_by    Int?      // Opcional, cambiado a Int asumiendo el ID del admin que lo borra
+}
+
+model Bebedero {
+  id            Int        @id @default(autoincrement())
+  latitud       Float
+  longitud      Float
+  estado        String     @default("ACTIVO") // Enums no soportados en SQLite: 'ACTIVO', 'MANTENIMIENTO', 'FUERA DE SERVICIO'
+  activo        Boolean    @default(true)
+
+  // Relaciones
+  pabellon_id   Int
+  pabellon      Pabellon   @relation(fields: [pabellon_id], references: [id])
+  codigos_qr    CodigoQR[]
+  reportes      Reporte[]
+  controles     ControlCalidad[]
+
+  // Timestamps
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @default(now())@updatedAt
+  deleted_at    DateTime? // Opcional para soft deletes
+  deleted_by    Int?      // Opcional, cambiado a Int asumiendo el ID del admin que lo borra
+}
+
+model CodigoQR {
+  id            Int        @id @default(autoincrement())
+  codigo        String
+  activo        Boolean    @default(true)
+
+  // Relaciones
+  bebedero_id   Int
+  bebedero      Bebedero   @relation(fields: [bebedero_id], references: [id])
+
+  // Timestamps
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @default(now())@updatedAt
+  deleted_at    DateTime? // Opcional para soft deletes
+  deleted_by    Int?      // Opcional, cambiado a Int asumiendo el ID del admin que lo borra
+}
+
+model Reporte {
+  id               Int        @id @default(autoincrement())
+  tipo             String     @default("PENDIENTE") // 'PENDIENTE', 'REVISION', 'RESUELTO'
+  estado           String     // 'FUGA DE AGUA', 'AGUA TURBIA', 'OTRAS AVERIAS'
+  fecha_revision   DateTime
+  observacion      String?    // El '?' lo hace opcional
+  correo_reporte   String?
+  activo           Boolean    @default(true)
+
+  // Relaciones
+  bebedero_id      Int
+  bebedero         Bebedero   @relation(fields: [bebedero_id], references: [id])
+  control_calidad ControlCalidad?
+
+  // Timestamps
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @default(now())@updatedAt
+  deleted_at       DateTime? // Opcional para soft deletes
+  deleted_by       Int?      // Opcional, cambiado a Int asumiendo el ID del admin que lo borra
+}
+
+model ControlCalidad {
+  id                            Int        @id @default(autoincrement())
+  nombre_responsable            String
+  apellido_paterno_responsable  String
+  apellido_materno_responsable  String
+  fecha_control                 DateTime
+  fecha_resolucion              DateTime
+  estado                        String     @default("SOLICITADO") // 'SOLICITADO', 'REVISION', 'APROBADO', 'DENEGADO'
+  observacion                   String?
+  activo                        Boolean    @default(true)
+
+  // Relaciones
+  reporte_id                    Int?      @unique// Opcional porque no todo control de calidad deriva de un reporte
+  reporte                       Reporte?  @relation(fields: [reporte_id], references: [id])
+  bebedero_id                   Int
+  bebedero                      Bebedero   @relation(fields: [bebedero_id], references: [id])
+
+  // Timestamps
+  createdAt                     DateTime   @default(now())
+  updatedAt                     DateTime   @default(now())@updatedAt
+  deleted_at                    DateTime? // Opcional para soft deletes
+  deleted_by                    Int?      // Opcional, cambiado a Int asumiendo el ID del admin que lo borra
+}
