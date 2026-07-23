@@ -7,6 +7,7 @@ import {PORT} from './src/config/env.js';
 
 import bebederoRouter from "./src/routes/bebedero.rutas/bebedero.routes.js";
 import codigoRouter from "./src/routes/bebedero.rutas/codigoqr.routes.js";
+import { resolverCodigo } from "./src/controllers/bebedero/codigoqr.controller.js";
 
 import pabellonRouter from "./src/routes/pabellon.rutas/pabellon.routes.js";
 
@@ -40,6 +41,10 @@ app.use('/api/v1/bebederos', bebederoRouter); // direccionar las rutas
 app.get('/api/v1/health', (req, res) => {
     res.json({ success: true, status: 'ok' });
 });
+
+// Ruta corta a la que apuntan los QR pegados en los bebederos. Fuera de /api/v1
+// a propósito: cada carácter de la URL densifica el código impreso.
+app.get('/q/:codigo', resolverCodigo);
 
 // Servir el frontend en el mismo origen que la API (index.html en "/", reporte.html, etc.)
 app.use(express.static(FRONT_DIR));

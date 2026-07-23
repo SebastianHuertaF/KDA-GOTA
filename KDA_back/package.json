@@ -13,6 +13,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
     "db:seed": "node --experimental-strip-types prisma/seed.js",
+    "qr:generar": "node --experimental-strip-types scripts/generar-qr.js",
     "setup": "npm install && prisma generate && prisma migrate deploy && npm run db:seed"
   },
   "dependencies": {
@@ -32,6 +33,7 @@
     "mongoose-sequence": "^6.0.1",
     "morgan": "~1.9.1",
     "pug": "2.0.0-beta11",
+    "qrcode": "^1.5.4",
     "sqlite3": "^6.0.1"
   },
   "devDependencies": {

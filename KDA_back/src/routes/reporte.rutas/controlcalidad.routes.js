@@ -8,8 +8,12 @@ import {
     getControlesCalidad,
     updateControlCalidad
 } from "../../controllers/reporte/controlcalidad.controller.js";
+import authorize from "../../middlewares/auth.middleware.js";
 
 const controlcalidadRouter = new Router();
+
+// El control de calidad es trabajo interno de mantenimiento: todo con token.
+controlcalidadRouter.use(authorize);
 
 controlcalidadRouter.get('/', getControlesCalidad);
 

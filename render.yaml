@@ -20,4 +20,20 @@ services:
         generateValue: true
       - key: JWT_EXPIRES_IN
         value: 1d
+      # URL que se codifica dentro de los QR impresos. Ajústala si cambias el
+      # nombre del servicio, o los stickers apuntarán a un dominio muerto.
+      - key: APP_URL
+        value: https://kda-gota.onrender.com
+      # OJO: valor fijo a propósito, NUNCA generateValue. Los códigos QR se
+      # derivan de este salt; si cambiara en cada deploy, todas las etiquetas ya
+      # pegadas en los bebederos dejarían de resolver.
+      - key: QR_SALT
+        value: kda-gota-qr
+      # Cuenta inicial del panel. El registro público está cerrado, así que sin
+      # esto no hay forma de entrar. sync: false = Render la pide al desplegar y
+      # la guarda en el panel, no queda escrita en el repo.
+      - key: ADMIN_EMAIL
+        value: admin@pucp.edu.pe
+      - key: ADMIN_PASSWORD
+        sync: false
       # PORT lo inyecta Render automáticamente; app.js lo respeta (PORT || 3000).

@@ -26,6 +26,62 @@ Esto se decidió pensando primero en el despliegue gratuito:
   `POST /api/v1/reportes` real con el `id` del bebedero.
 - Si el backend está caído, el mapa **sigue funcionando** con las capas estáticas.
 
+### Panel de administración y autenticación
+
+`/admin.html` es la vista de monitoreo del personal de mantenimiento: contadores,
+bebederos más reportados, filtros y cambio de estado de cada reporte.
+
+**La API dejó de ser abierta.** Antes cualquiera podía listar usuarios o borrar
+reportes con un `curl`; ahora [auth.middleware.js](KDA_back/src/middlewares/auth.middleware.js)
+verifica el JWT que ya emitía el login. Reparto actual:
+
+| Público (sin token) | Protegido (Bearer) |
+|---|---|
+| `GET /api/v1/bebederos` (el mapa) | Todo `/api/v1/users` y `/api/v1/controles` |
+| `POST /api/v1/reportes` (el formulario del QR) | `GET/PUT/DELETE /api/v1/reportes` |
+| `GET /api/v1/codigos` y el SVG (imprimir etiquetas) | `GET /api/v1/bebederos/:id` (incluye reportes) |
+| `GET /q/:codigo` (el escaneo) | Escrituras de bebederos y códigos QR |
+
+Los reportes traen `correo_reporte`, por eso leerlos exige token aunque crearlos no.
+
+**El registro público está cerrado**: `POST /auth/sign-up` ahora exige token, así que
+solo una cuenta existente puede crear otra. La primera la siembra el seed a partir de
+`ADMIN_EMAIL` / `ADMIN_PASSWORD`. Si no defines `ADMIN_PASSWORD` el seed no crea nada
+y no podrás entrar al panel — es a propósito: una contraseña por defecto sería una
+puerta trasera conocida en cada copia del proyecto. En Render va con `sync: false`
+para que la pidas al desplegar y no quede escrita en el repo.
+
+### Códigos QR de los bebederos
+
+Cada bebedero tiene una etiqueta QR pegada encima. El QR **no** contiene el id
+directo, sino un código opaco que el backend resuelve:
+
+```
+QR → https://tu-app/q/F10F54D0 → 302 → /reporte.html?id=1&bebedero=…&estado=…
+```
+
+Esa indirección permite **revocar** una etiqueta concreta (`CodigoQR.activo = false`,
+que manda a `qr-invalido.html`) sin reimprimir las demás, y resuelve el estado del
+bebedero en cada escaneo en vez de dejarlo congelado en el papel.
+
+- **Los códigos son deterministas**: se derivan de `sha256(QR_SALT + bebedero_id)`
+  en [codigo-qr.js](KDA_back/src/utils/codigo-qr.js). Es imprescindible aquí: el seed
+  corre en **cada arranque** (ver abajo), y con códigos aleatorios cada reinicio de
+  Render invalidaría todas las etiquetas ya pegadas en el campus.
+- **`QR_SALT` debe ser fijo para siempre.** Si cambia, todos los QR impresos mueren.
+  Por eso en `render.yaml` va como `value:` y nunca como `generateValue: true`.
+- **`APP_URL` debe ser la URL pública absoluta.** Es lo que se codifica dentro del QR;
+  `localhost` no existe para el celular que escanea. Para probar con el móvil en local,
+  ponle la IP LAN de tu PC (ej. `http://192.168.1.10:3000`).
+
+Para imprimirlas: abre **`/etiquetas.html`** → botón *Imprimir* → salen 12 por hoja A4
+en papel adhesivo, con el nombre del pabellón en cada una para saber dónde va pegada.
+El SVG de una etiqueta suelta está en `GET /api/v1/codigos/:codigo/imagen.svg`.
+
+> Ojo con el plan free: quien escanee el sticker en el campus se come el cold start
+> de ~30–50 s si el servicio estaba dormido. Es el argumento más fuerte para mover el
+> backend a algo que no duerma si el QR pasa a uso real.
+
 ---
 
 ## Correr en local

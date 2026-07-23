@@ -29,8 +29,10 @@ const ESTADOS_BEBEDERO = {
 };
 const ESTADO_DEFECTO = "operativo";
 
-// Categorías marcadas al iniciar
-const ACTIVAS_INICIO = new Set(["Bebederos", "Unidades"]);
+// Categorías marcadas al iniciar. Solo bebederos: es el objeto de la aplicación y
+// con "Unidades" encendida (59 puntos) los 12 bebederos se perdían entre los pines.
+// El resto de capas sigue disponible en el panel de filtros.
+const ACTIVAS_INICIO = new Set(["Bebederos"]);
 
 // URL del formulario de reportes (se le pasan los datos del bebedero por query string)
 const FORM_REPORTE = "reporte.html";
@@ -109,10 +111,15 @@ function construirFiltros() {
 		if (b === "Bebederos") return 1;
 		return a.localeCompare(b, "es");
 	});
+	// Si el backend no respondió no hay capa "Bebederos", y con solo esa activada
+	// el mapa abriría en blanco. En ese caso caemos a Unidades para que siga
+	// mostrando algo (la degradación elegante que ya tenía la carga de datos).
+	const activasInicio = grupos["Bebederos"] ? ACTIVAS_INICIO : new Set(["Unidades"]);
+
 	tipos.forEach((tipo, i) => {
 		const cfg = CATEGORIAS[tipo] || CATEGORIAS["Otros"];
 		const id = "fi" + i;
-		const checked = ACTIVAS_INICIO.has(tipo);
+		const checked = activasInicio.has(tipo);
 		const div = document.createElement("div");
 		div.className = "filtro-item";
 		div.innerHTML = `

@@ -21,15 +21,87 @@ const parseDate = (value) => {
     return date;
 };
 
+// Filtros + paginación: el panel no puede traerse la tabla entera para contar en
+// el navegador. Con 12 bebederos con QR esto crece rápido.
+// Ojo con los nombres del modelo: 'tipo' es el estado del flujo
+// (PENDIENTE/REVISION/RESUELTO) y 'estado' es el tipo de problema reportado.
 export const getReportes = async (req, res, next) => {
     try {
-        const reportes = await client.reporte.findMany({
-            where: { activo: true },
-            include: { bebedero: true, control_calidad: true },
-            orderBy: { id: "asc" },
-        });
+        const pagina = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
+        const porPagina = Math.min(100, Math.max(1, Number.parseInt(req.query.limit, 10) || 25));
 
-        res.status(200).json({ success: true, data: reportes });
+        const where = { activo: true };
+        if (req.query.tipo) where.tipo = req.query.tipo;
+        if (req.query.problema) where.estado = req.query.problema;
+
+        const bebederoId = parseId(req.query.bebedero_id);
+        if (Number.isInteger(bebederoId)) where.bebedero_id = bebederoId;
+
+        const [total, reportes] = await Promise.all([
+            client.reporte.count({ where }),
+            client.reporte.findMany({
+                where,
+                include: { bebedero: { include: { pabellon: true } }, control_calidad: true },
+                orderBy: { createdAt: "desc" }, // en monitoreo interesa lo último primero
+                skip: (pagina - 1) * porPagina,
+                take: porPagina,
+            }),
+        ]);
+
+        res.status(200).json({
+            success: true,
+            data: reportes,
+            meta: { total, pagina, porPagina, paginas: Math.max(1, Math.ceil(total / porPagina)) },
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// Contadores para la cabecera del panel. Se resuelve con agregaciones en SQL en
+// vez de descargar todos los reportes y contarlos en el cliente.
+export const getResumenReportes = async (req, res, next) => {
+    try {
+        const where = { activo: true };
+
+        const [total, porFlujo, porProblema, masReportados] = await Promise.all([
+            client.reporte.count({ where }),
+            client.reporte.groupBy({ by: ["tipo"], where, _count: { _all: true } }),
+            client.reporte.groupBy({ by: ["estado"], where, _count: { _all: true } }),
+            client.reporte.groupBy({
+                by: ["bebedero_id"],
+                where,
+                _count: { _all: true },
+                orderBy: { _count: { bebedero_id: "desc" } },
+                take: 5,
+            }),
+        ]);
+
+        // Los bebederos más reportados se muestran por pabellón, no por id.
+        const bebederos = await client.bebedero.findMany({
+            where: { id: { in: masReportados.map((b) => b.bebedero_id) } },
+            include: { pabellon: true },
+        });
+        const nombrePorId = new Map(
+            bebederos.map((b) => [b.id, b.pabellon?.nombre || `Bebedero #${b.id}`])
+        );
+
+        const aObjeto = (filas, clave) =>
+            Object.fromEntries(filas.map((f) => [f[clave], f._count._all]));
+
+        res.status(200).json({
+            success: true,
+            data: {
+                total,
+                porFlujo: aObjeto(porFlujo, "tipo"),
+                porProblema: aObjeto(porProblema, "estado"),
+                masReportados: masReportados.map((b) => ({
+                    bebedero_id: b.bebedero_id,
+                    pabellon: nombrePorId.get(b.bebedero_id) || `Bebedero #${b.bebedero_id}`,
+                    reportes: b._count._all,
+                })),
+            },
+        });
     } catch (error) {
         next(error);
     }

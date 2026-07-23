@@ -21,9 +21,19 @@
 			font-size: 14px; font-family: inherit; }
 		select:focus, textarea:focus, input:focus { outline: none; border-color: #0033a0; }
 		textarea { min-height: 110px; resize: vertical; }
+		.invalido { border-color: #c0392b; background: #fff7f6; }
+		.invalido:focus { border-color: #c0392b; }
+		.error { display: none; color: #c0392b; font-size: 13px; margin: 6px 0 0; }
+		.error.visible { display: block; }
+		.contador { font-size: 12px; color: #999; text-align: right; margin: 5px 0 0; }
+		.contador.limite { color: #c0392b; font-weight: 600; }
+		.aviso { display: none; background: #fdecea; border: 1px solid #f3c4bf; color: #a5342a;
+			border-radius: 8px; padding: 11px 13px; font-size: 13px; margin: 0 0 18px; }
+		.aviso.visible { display: block; }
 		.btn { margin-top: 22px; width: 100%; background: #0033a0; color: #fff; border: none;
 			padding: 13px; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; }
 		.btn:hover { background: #00257a; }
+		.btn:disabled { background: #9aa5bb; cursor: not-allowed; }
 		.ok { display: none; text-align: center; padding: 10px 0; }
 		.ok .check { font-size: 46px; }
 		.ok h2 { color: #2e9e3f; margin: 8px 0; }
@@ -43,8 +53,10 @@
 				Estado actual registrado: <b id="beb-estado">—</b>
 			</div>
 
+			<div class="aviso" id="aviso"></div>
+
 			<label for="tipo">Tipo de problema</label>
-			<select id="tipo" required>
+			<select id="tipo" required aria-describedby="err-tipo">
 				<option value="">Selecciona una opción…</option>
 				<option>No sale agua / fuera de servicio</option>
 				<option>Filtro en mal estado / agua con mal sabor u olor</option>
@@ -54,12 +66,18 @@
 				<option>Falta de higiene</option>
 				<option>Otro</option>
 			</select>
+			<p class="error" id="err-tipo" role="alert"></p>
 
 			<label for="desc">Descripción</label>
-			<textarea id="desc" placeholder="Cuéntanos qué observaste…" required></textarea>
+			<textarea id="desc" placeholder="Cuéntanos qué observaste…" required
+				maxlength="500" aria-describedby="err-desc"></textarea>
+			<p class="contador" id="contador">0/500</p>
+			<p class="error" id="err-desc" role="alert"></p>
 
 			<label for="correo">Tu correo PUCP (opcional, para darte seguimiento)</label>
-			<input type="email" id="correo" placeholder="codigo@pucp.edu.pe">
+			<input type="email" id="correo" placeholder="codigo@pucp.edu.pe"
+				autocomplete="email" aria-describedby="err-correo">
+			<p class="error" id="err-correo" role="alert"></p>
 
 			<button type="submit" class="btn" id="btn-enviar">Enviar reporte</button>
 			<p class="nota" id="nota-form">Tu reporte se guarda en el sistema de bebederos KDA.</p>
@@ -86,14 +104,105 @@
 		document.getElementById("ok-nombre").textContent = nombre;
 
 		const btn = document.getElementById("btn-enviar");
+		const aviso = document.getElementById("aviso");
+		const contador = document.getElementById("contador");
+
+		const DESC_MIN = 10;
+		const DESC_MAX = 500;
+		const DOMINIOS_PUCP = ["pucp.edu.pe", "pucp.pe"];
+		const RE_CORREO = /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i;
+		// Los tipos válidos salen del propio <select>: si se agrega una opción, no hay que tocar el JS.
+		const TIPOS = Array.from(document.getElementById("tipo").options)
+			.map((o) => o.value).filter(Boolean);
+
+		// Cada validador recibe el valor crudo y devuelve el mensaje de error ("" = válido).
+		const validadores = {
+			tipo(valor) {
+				if (!valor) return "Selecciona el tipo de problema.";
+				if (!TIPOS.includes(valor)) return "Elige una opción de la lista.";
+				return "";
+			},
+			desc(valor) {
+				const texto = valor.trim();
+				if (!texto) return "Describe el problema para que podamos atenderlo.";
+				if (texto.length < DESC_MIN) return `Danos un poco más de detalle (mínimo ${DESC_MIN} caracteres).`;
+				if (texto.length > DESC_MAX) return `La descripción no puede superar los ${DESC_MAX} caracteres.`;
+				return "";
+			},
+			correo(valor) {
+				const texto = valor.trim();
+				if (!texto) return ""; // es opcional
+				if (!RE_CORREO.test(texto)) return "Escribe un correo válido (ej. codigo@pucp.edu.pe).";
+				const dominio = texto.split("@")[1].toLowerCase();
+				if (!DOMINIOS_PUCP.includes(dominio)) return "Usa tu correo PUCP (@pucp.edu.pe o @pucp.pe).";
+				return "";
+			}
+		};
+
+		function pintarError(id, mensaje) {
+			const campo = document.getElementById(id);
+			const caja = document.getElementById("err-" + id);
+			caja.textContent = mensaje;
+			caja.classList.toggle("visible", Boolean(mensaje));
+			campo.classList.toggle("invalido", Boolean(mensaje));
+			campo.setAttribute("aria-invalid", mensaje ? "true" : "false");
+		}
+
+		function validarCampo(id) {
+			const mensaje = validadores[id](document.getElementById(id).value);
+			pintarError(id, mensaje);
+			return !mensaje;
+		}
+
+		function mostrarAviso(mensaje) {
+			aviso.textContent = mensaje;
+			aviso.classList.toggle("visible", Boolean(mensaje));
+		}
+
+		function actualizarContador() {
+			const largo = document.getElementById("desc").value.trim().length;
+			contador.textContent = `${largo}/${DESC_MAX}`;
+			contador.classList.toggle("limite", largo > DESC_MAX);
+		}
+
+		// El id debe venir del mapa y ser un entero positivo; sin él el POST no tiene destino.
+		const idValido = /^\d+$/.test((bebederoId || "").trim()) && Number(bebederoId) > 0;
+		if (!idValido) {
+			mostrarAviso("Falta el identificador del bebedero. Abre el formulario desde el mapa para poder reportar.");
+			btn.disabled = true;
+		}
+
+		let intentoEnvio = false; // no molestamos con errores antes del primer envío
+		Object.keys(validadores).forEach((id) => {
+			const campo = document.getElementById(id);
+			const evento = campo.tagName === "SELECT" ? "change" : "input";
+			campo.addEventListener(evento, () => { if (intentoEnvio) validarCampo(id); });
+			// Al salir del campo sí validamos si el usuario ya escribió algo.
+			campo.addEventListener("blur", () => { if (intentoEnvio || campo.value.trim()) validarCampo(id); });
+		});
+
+		document.getElementById("desc").addEventListener("input", actualizarContador);
+		actualizarContador();
 
 		document.getElementById("form").addEventListener("submit", async function (e) {
 			e.preventDefault();
-			const tipo = document.getElementById("tipo").value;
-			const desc = document.getElementById("desc").value.trim();
-			const correo = document.getElementById("correo").value.trim();
-			if (!tipo || !desc) { alert("Completa el tipo de problema y la descripción."); return; }
-			if (!bebederoId) { alert("Falta el identificador del bebedero. Abre el formulario desde el mapa."); return; }
+			intentoEnvio = true;
+			mostrarAviso("");
+
+			// Validamos todos los campos (sin cortocircuito) para mostrar de golpe lo que falta.
+			const valido = Object.keys(validadores)
+				.map((id) => validarCampo(id))
+				.every(Boolean);
+
+			if (!valido) {
+				const primero = this.querySelector(".invalido");
+				if (primero) primero.focus();
+				return;
+			}
+			if (!idValido) {
+				mostrarAviso("Falta el identificador del bebedero. Abre el formulario desde el mapa para poder reportar.");
+				return;
+			}
 
 			btn.disabled = true;
 			const textoOriginal = btn.textContent;
@@ -102,15 +211,15 @@
 			try {
 				await KDA_API.crearReporte({
 					bebedero_id: bebederoId,
-					tipoProblema: tipo,
-					descripcion: desc,
-					correo: correo
+					tipoProblema: document.getElementById("tipo").value,
+					descripcion: document.getElementById("desc").value.trim(),
+					correo: document.getElementById("correo").value.trim()
 				});
 				this.style.display = "none";
 				document.getElementById("ok").style.display = "block";
 			} catch (err) {
 				console.error(err);
-				alert("No se pudo enviar el reporte. Verifica que el backend esté encendido.\n\n" + err.message);
+				mostrarAviso("No se pudo enviar el reporte (" + err.message + "). Verifica que el backend esté encendido e inténtalo de nuevo.");
 				btn.disabled = false;
 				btn.textContent = textoOriginal;
 			}
