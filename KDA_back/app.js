@@ -1,4 +1,7 @@
 import express from 'express';
+import cors from 'cors';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import {PORT} from './src/config/env.js';
 
@@ -16,8 +19,13 @@ import userRouter from "./src/routes/usuario.rutas/user.routes.js";
 import { connectToDatabase } from "./src/database/sqlite.js";
 import errorMiddleware from "./src/middlewares/error.middleware.js";
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// El frontend estático vive en el proyecto hermano KDA_front
+const FRONT_DIR = path.resolve(__dirname, '../KDA_front');
+
 const app = express();
 
+app.use(cors()); // respaldo: permite que el front funcione aunque corra en otro origen (ej. Live Server)
 app.use(express.json());
 app.use(express.urlencoded({ extended: false })); // process in simple format
 
@@ -29,15 +37,17 @@ app.use('/api/v1/pabellones', pabellonRouter); // direccionar las rutas
 app.use('/api/v1/codigos', codigoRouter); // direccionar las rutas
 app.use('/api/v1/bebederos', bebederoRouter); // direccionar las rutas
 
-
-app.get('/', (req, res) => {
-    res.send('Bienvenido a KDA GOTA APP');
+app.get('/api/v1/health', (req, res) => {
+    res.json({ success: true, status: 'ok' });
 });
+
+// Servir el frontend en el mismo origen que la API (index.html en "/", reporte.html, etc.)
+app.use(express.static(FRONT_DIR));
 
 app.use(errorMiddleware);
 
-app.listen(PORT, async() => {
-    console.log('KDA GOTA App listening on http://localhost:'+ PORT );
+app.listen(PORT || 3000, async() => {
+    console.log('KDA GOTA App listening on http://localhost:'+ (PORT || 3000) );
 
     await connectToDatabase(); // conectar a la bd (asincrono)
 });

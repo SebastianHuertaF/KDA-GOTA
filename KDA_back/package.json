@@ -3,9 +3,17 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=22.6.0"
+  },
   "scripts": {
-    "start": "node ./bin/www",
-    "dev": "nodemon app.js"
+    "start": "node --experimental-strip-types app.js",
+    "start:prod": "prisma migrate deploy && node --experimental-strip-types prisma/seed.js && node --experimental-strip-types app.js",
+    "dev": "nodemon --exec \"node --experimental-strip-types\" app.js",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
+    "db:seed": "node --experimental-strip-types prisma/seed.js",
+    "setup": "npm install && prisma generate && prisma migrate deploy && npm run db:seed"
   },
   "dependencies": {
     "@prisma/adapter-better-sqlite3": "^7.8.0",
@@ -13,6 +21,7 @@
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.11.1",
     "cookie-parser": "~1.4.4",
+    "cors": "^2.8.6",
     "debug": "~2.6.9",
     "dotenv": "^17.4.2",
     "express": "~4.16.1",

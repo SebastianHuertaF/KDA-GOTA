@@ -210,9 +210,15 @@ document.getElementById("toggle-todos").addEventListener("click", () => {
 });
 
 // ---- Carga de datos ----
+// Los bebederos vienen EN VIVO del backend (API); las demás categorías siguen
+// desde el JSON estático. Si el backend no responde, el mapa sigue funcionando
+// con las demás capas (degradación elegante).
 Promise.all([
 	fetch("data/puntos.json").then(r => r.json()),
-	fetch("data/bebederos.json").then(r => r.json())
+	KDA_API.getBebederos().catch(err => {
+		console.warn("No se pudieron cargar bebederos del backend, se continúa sin ellos:", err);
+		return [];
+	})
 ]).then(([puntos, bebederos]) => {
 	agregarPuntos(bebederos);   // bebederos primero para que queden encima
 	agregarPuntos(puntos);

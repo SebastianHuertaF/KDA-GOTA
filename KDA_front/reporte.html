@@ -61,8 +61,8 @@
 			<label for="correo">Tu correo PUCP (opcional, para darte seguimiento)</label>
 			<input type="email" id="correo" placeholder="codigo@pucp.edu.pe">
 
-			<button type="submit" class="btn">Enviar reporte</button>
-			<p class="nota">Demo: el envío es simulado, no se guarda en ningún servidor.</p>
+			<button type="submit" class="btn" id="btn-enviar">Enviar reporte</button>
+			<p class="nota" id="nota-form">Tu reporte se guarda en el sistema de bebederos KDA.</p>
 		</form>
 
 		<div class="ok" id="ok">
@@ -74,24 +74,46 @@
 		</div>
 	</div>
 
+	<script src="config.js"></script>
+	<script src="api.js"></script>
 	<script>
 		const params = new URLSearchParams(location.search);
+		const bebederoId = params.get("id"); // id numérico real del backend
 		const nombre = params.get("bebedero") || "Bebedero sin especificar";
 		const estado = params.get("estado") || "Desconocido";
 		document.getElementById("beb-nombre").textContent = nombre;
 		document.getElementById("beb-estado").textContent = estado;
 		document.getElementById("ok-nombre").textContent = nombre;
 
-		document.getElementById("form").addEventListener("submit", function (e) {
+		const btn = document.getElementById("btn-enviar");
+
+		document.getElementById("form").addEventListener("submit", async function (e) {
 			e.preventDefault();
 			const tipo = document.getElementById("tipo").value;
 			const desc = document.getElementById("desc").value.trim();
+			const correo = document.getElementById("correo").value.trim();
 			if (!tipo || !desc) { alert("Completa el tipo de problema y la descripción."); return; }
-			// Demo: aquí iría el envío real (fetch a una API / Google Forms).
-			console.log("Reporte (mock):", { bebedero: nombre, estado, tipo, desc,
-				correo: document.getElementById("correo").value });
-			this.style.display = "none";
-			document.getElementById("ok").style.display = "block";
+			if (!bebederoId) { alert("Falta el identificador del bebedero. Abre el formulario desde el mapa."); return; }
+
+			btn.disabled = true;
+			const textoOriginal = btn.textContent;
+			btn.textContent = "Enviando…";
+
+			try {
+				await KDA_API.crearReporte({
+					bebedero_id: bebederoId,
+					tipoProblema: tipo,
+					descripcion: desc,
+					correo: correo
+				});
+				this.style.display = "none";
+				document.getElementById("ok").style.display = "block";
+			} catch (err) {
+				console.error(err);
+				alert("No se pudo enviar el reporte. Verifica que el backend esté encendido.\n\n" + err.message);
+				btn.disabled = false;
+				btn.textContent = textoOriginal;
+			}
 		});
 	</script>
 </body>

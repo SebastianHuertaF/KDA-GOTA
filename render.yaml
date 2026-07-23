@@ -1,0 +1,23 @@
+# Despliegue gratuito en Render.com (un solo servicio).
+# Express sirve la API y el frontend estático desde el MISMO origen: 1 URL, sin CORS.
+# La BD SQLite es efímera en el plan free; por eso se migra y se re-siembra en cada
+# arranque (start:prod), así la demo siempre tiene datos.
+services:
+  - type: web
+    name: kda-gota
+    runtime: node
+    plan: free
+    rootDir: KDA_back
+    buildCommand: npm install && npx prisma generate
+    startCommand: npm run start:prod
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        value: file:./dev.db
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 1d
+      # PORT lo inyecta Render automáticamente; app.js lo respeta (PORT || 3000).
