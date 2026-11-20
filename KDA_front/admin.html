@@ -317,7 +317,7 @@
 			for (const b of top) {
 				const li = document.createElement("li");
 				const nombre = document.createElement("span");
-				nombre.textContent = b.pabellon;
+				nombre.textContent = b.codigo ? `${b.codigo} · ${b.pabellon}` : b.pabellon;
 				const cant = document.createElement("span");
 				cant.className = "cant";
 				cant.textContent = `${b.reportes} ${b.reportes === 1 ? "reporte" : "reportes"}`;
@@ -345,7 +345,7 @@
 			sel.appendChild(new Option("Todos", ""));
 			(data || []).forEach((b) => {
 				const nombre = (b.pabellon && b.pabellon.nombre) || `Bebedero #${b.id}`;
-				sel.appendChild(new Option(nombre, b.id));
+				sel.appendChild(new Option(b.codigo ? `${b.codigo} · ${nombre}` : nombre, b.id));
 			});
 			sel.value = actual;
 		}
@@ -399,7 +399,7 @@
 			tr.appendChild(celda(fecha.toLocaleString("es-PE", {
 				day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit"
 			}), "fecha"));
-			tr.appendChild(celda(nombre, "lugar"));
+			tr.appendChild(celda(beb.codigo ? `${beb.codigo} · ${nombre}` : nombre, "lugar"));
 			// Recordatorio: en el modelo, 'estado' del reporte es el TIPO DE PROBLEMA.
 			tr.appendChild(celda(r.estado || "—"));
 			tr.appendChild(celda(r.observacion || "—", "obs"));

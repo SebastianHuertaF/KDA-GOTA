@@ -16,6 +16,7 @@
 		return {
 			id: b.id, // id numérico real del backend (se usa al reportar)
 			title: `Bebedero - ${nombre}`,
+			codigo: b.codigo || "",
 			lat: b.latitud,
 			lng: b.longitud,
 			tipo: "Bebederos",

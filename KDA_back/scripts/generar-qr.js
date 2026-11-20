@@ -50,7 +50,7 @@ async function main() {
     for (const registro of codigos) {
         const nombre = registro.bebedero.pabellon?.nombre || `Bebedero ${registro.bebedero_id}`;
         const url = `${BASE}/q/${registro.codigo}`;
-        const archivo = `${String(registro.bebedero_id).padStart(2, '0')}-${parteSegura(nombre)}-${registro.codigo}.png`;
+        const archivo = `${String(registro.bebedero_id).padStart(2, '0')}-${parteSegura(registro.bebedero.codigo)}-${registro.codigo}.png`;
 
         await QRCode.toFile(path.join(SALIDA, archivo), url, {
             errorCorrectionLevel: 'H', // aguanta ~30% de daño: agua, rayones, suciedad

@@ -40,6 +40,7 @@ model Pabellon {
 
 model Bebedero {
   id            Int        @id @default(autoincrement())
+  codigo        String     @unique // Código legible del bebedero, ej. 'BEB-POLI-03'
   latitud       Float
   longitud      Float
   estado        String     @default("ACTIVO") // Enums no soportados en SQLite: 'ACTIVO', 'MANTENIMIENTO', 'FUERA DE SERVICIO'

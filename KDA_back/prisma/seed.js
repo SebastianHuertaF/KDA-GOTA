@@ -1,4 +1,4 @@
-// Seed idempotente: carga los bebederos de demostración a partir del mismo
+// Seed idempotente: carga los bebederos (mapeo oficial) a partir del mismo
 // archivo que usaba el frontend estático (KDA_front/data/bebederos.json).
 // Se ejecuta en cada arranque de producción (start:prod) para que la BD
 // efímera de los planes gratuitos siempre tenga datos.
@@ -24,11 +24,9 @@ const ESTADO_FRONT_A_BACKEND = {
     fuera_servicio: 'FUERA DE SERVICIO',
 };
 
-// Abreviación corta a partir del nombre del pabellón (ej. "Pabellón A (Letras)" -> "PA").
-const abreviar = (nombre) => {
-    const letras = nombre.replace(/[^A-Za-zÁÉÍÓÚÑ ]/g, ' ').trim().split(/\s+/);
-    return letras.slice(0, 3).map((w) => w[0].toUpperCase()).join('') || 'BEB';
-};
+// Abreviación corta a partir del nombre de la zona (ej. "Polideportivo" -> "POLI").
+const abreviar = (nombre) =>
+    nombre.normalize('NFD').replace(/[^A-Za-z]/g, '').slice(0, 4).toUpperCase() || 'BEB';
 
 async function sembrarBebederos() {
     const yaHay = await client.bebedero.count();
@@ -38,21 +36,20 @@ async function sembrarBebederos() {
     }
 
     const bebederos = JSON.parse(readFileSync(BEBEDEROS_JSON, 'utf-8'));
+    const pabellones = new Map(); // zona -> Pabellon (uno por zona, no uno por bebedero)
 
     for (const b of bebederos) {
-        const nombrePabellon = b.title.replace(/^Bebedero\s*-\s*/, '');
-
-        // Un pabellón por bebedero, para conservar el nombre descriptivo sin
-        // tener que ampliar el esquema (esto es lo que verá el popup del mapa).
-        const pabellon = await client.pabellon.create({
-            data: {
-                nombre: nombrePabellon,
-                abreviation: abreviar(nombrePabellon),
-            },
-        });
+        let pabellon = pabellones.get(b.zona);
+        if (!pabellon) {
+            pabellon = await client.pabellon.create({
+                data: { nombre: b.zona, abreviation: abreviar(b.zona) },
+            });
+            pabellones.set(b.zona, pabellon);
+        }
 
         await client.bebedero.create({
             data: {
+                codigo: b.codigo,
                 latitud: b.lat,
                 longitud: b.lng,
                 estado: ESTADO_FRONT_A_BACKEND[b.estado] || 'ACTIVO',
@@ -61,7 +58,7 @@ async function sembrarBebederos() {
         });
     }
 
-    console.log(`Bebederos: ${bebederos.length} creados.`);
+    console.log(`Bebederos: ${bebederos.length} creados en ${pabellones.size} pabellones.`);
 }
 
 // Un código QR activo por bebedero. Es idempotente a nivel de bebedero (no de

@@ -119,7 +119,7 @@ export const resolverCodigo = async (req, res, next) => {
         const nombre = bebedero.pabellon?.nombre || `Bebedero #${bebedero.id}`;
         const query = new URLSearchParams({
             id: String(bebedero.id),
-            bebedero: nombre,
+            bebedero: `${nombre} (${bebedero.codigo})`,
             estado: bebedero.estado,
         });
 

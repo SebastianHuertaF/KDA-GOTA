@@ -39,10 +39,11 @@ export const getBebederoById = async (req, res, next) => {
 
 export const createBebedero = async (req, res, next) => {
     try {
-        const { latitud, longitud, estado, pabellon_id } = req.body;
+        const { codigo, latitud, longitud, estado, pabellon_id } = req.body;
 
         const bebedero = await client.bebedero.create({
             data: {
+                codigo,
                 latitud: Number(latitud),
                 longitud: Number(longitud),
                 estado,
@@ -59,7 +60,7 @@ export const createBebedero = async (req, res, next) => {
 export const updateBebedero = async (req, res, next) => {
     try {
         const id = parseId(req.params.id);
-        const { latitud, longitud, estado, activo, pabellon_id } = req.body;
+        const { codigo, latitud, longitud, estado, activo, pabellon_id } = req.body;
 
         const exists = await client.bebedero.findFirst({ where: { id, activo: true } });
         if (!exists) throw notFound();
@@ -67,6 +68,7 @@ export const updateBebedero = async (req, res, next) => {
         const bebedero = await client.bebedero.update({
             where: { id },
             data: {
+                codigo,
                 latitud: latitud === undefined ? undefined : Number(latitud),
                 longitud: longitud === undefined ? undefined : Number(longitud),
                 estado,

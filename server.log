@@ -1,0 +1,12 @@
+
+> KDA GOTA@0.0.0 dev
+> nodemon --exec "node --experimental-strip-types" app.js
+
+[33m[nodemon] 3.1.14[39m
+[33m[nodemon] to restart at any time, enter `rs`[39m
+[33m[nodemon] watching path(s): *.*[39m
+[33m[nodemon] watching extensions: js,mjs,cjs,json[39m
+[32m[nodemon] starting `node --experimental-strip-types app.js`[39m
+◇ injected env (9) from .env.development.local // tip: ⌁ auth for agents [www.vestauth.com]
+KDA GOTA App listening on http://localhost:3000
+SQLite database connected

@@ -38,11 +38,11 @@ const ACTIVAS_INICIO = new Set(["Bebederos"]);
 const FORM_REPORTE = "reporte.html";
 
 const map = L.map("el-mapa", { zoomControl: true }).setView([-12.0694982, -77.079835], 17);
-// Fondo minimalista (CartoDB Positron): gris claro, sin ruido de comercios/colores.
-L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-	maxZoom: 20,
-	subdomains: "abcd",
-	attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+// Fondo OpenStreetMap estándar. CARTO (Positron) ahora exige API key y pinta una
+// marca de agua "API KEY REQUIRED" sobre todo el mapa.
+L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+	maxZoom: 19,
+	attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
 }).addTo(map);
 
 function colorDePunto(p) {
@@ -75,13 +75,15 @@ function construirPopup(p) {
 	}
 	const est = ESTADOS_BEBEDERO[p.estado] || ESTADOS_BEBEDERO[ESTADO_DEFECTO];
 	const nombre = p.title.replace(/^Bebedero\s*-\s*/, "");
-	const params = new URLSearchParams({ id: p.id || "", bebedero: nombre, estado: est.label });
+	const etiqueta = p.codigo ? `${nombre} (${p.codigo})` : nombre;
+	const params = new URLSearchParams({ id: p.id || "", bebedero: etiqueta, estado: est.label });
 	return `
 		<div class="popup-beb">
 			<div class="popup-titulo">💧 ${escapeHtml(nombre)}</div>
 			<span class="estado-badge" style="background:${est.color}">${est.label}</span>
 			<p class="estado-desc">${escapeHtml(est.desc)}</p>
 			<dl class="popup-detalles">
+				<dt>Código</dt><dd>${escapeHtml(p.codigo || "—")}</dd>
 				<dt>Ubicación</dt><dd>${escapeHtml(p.ubicacion || "—")}</dd>
 				<dt>Último reporte</dt><dd>${escapeHtml(p.ultimoReporte || "—")}</dd>
 				<dt>Reportes</dt><dd>${p.reportes != null ? p.reportes : 0}</dd>

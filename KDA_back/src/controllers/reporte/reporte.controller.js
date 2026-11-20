@@ -85,6 +85,7 @@ export const getResumenReportes = async (req, res, next) => {
         const nombrePorId = new Map(
             bebederos.map((b) => [b.id, b.pabellon?.nombre || `Bebedero #${b.id}`])
         );
+        const codigoPorId = new Map(bebederos.map((b) => [b.id, b.codigo]));
 
         const aObjeto = (filas, clave) =>
             Object.fromEntries(filas.map((f) => [f[clave], f._count._all]));
@@ -97,6 +98,7 @@ export const getResumenReportes = async (req, res, next) => {
                 porProblema: aObjeto(porProblema, "estado"),
                 masReportados: masReportados.map((b) => ({
                     bebedero_id: b.bebedero_id,
+                    codigo: codigoPorId.get(b.bebedero_id) || null,
                     pabellon: nombrePorId.get(b.bebedero_id) || `Bebedero #${b.bebedero_id}`,
                     reportes: b._count._all,
                 })),
